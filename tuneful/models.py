@@ -44,6 +44,6 @@ class File(Base):
   def as_dictionary(self):
     file = {
       "id": self.id,
-      "namae": self.filename
+      "name": self.filename
     }
     return file
