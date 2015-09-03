@@ -106,7 +106,7 @@ class TestAPI(unittest.TestCase):
       }
     }
     
-    response = self.client.post("api/songs",
+    response = self.client.post("/api/songs",
       data=json.dumps(data),
       content_type="application/json",
       headers=[("Accept", "application/json")]
@@ -124,6 +124,70 @@ class TestAPI(unittest.TestCase):
     
     song = songs[0]
     self.assertEqual(song.id, fileA.id)
+    
+  def test_update_song(self):
+    """ Updating a song (PUT) from a populated database """
+    fileA = models.File(filename="FileA")
+    fileB = models.File(filename="FileB")
+    session.add_all([fileA, fileB])
+    session.commit()
+    
+    songA = models.Song(song_file_id=fileA.id)
+    session.add(songA)
+    session.commit()
+    
+    data_payload = {
+      "file": {
+        "id": fileB.id
+      }
+    }
+    
+    response = self.client.put("/api/song/{}".format(songA.id),
+      data=json.dumps(data_payload),
+      content_type="application/json",
+      headers=[("Accept", "application/json")]
+    )
+    
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.mimetype, "application/json")
+    
+    data_response = json.loads(response.data)
+    self.assertEqual(len(data_response), 2)
+    
+    self.assertEqual(data_response["id"], 1)
+    self.assertEqual(data_response["file"]["id"], 2)
+    
+  def test_delete_song(self):
+    """ Delete a single song from a populated database """
+    fileA = models.File(filename="FileA")
+    fileB = models.File(filename="FileB")
+    session.add_all([fileA, fileB])
+    session.commit()
+    
+    songA = models.Song(song_file_id=fileA.id)
+    songB = models.Song(song_file_id=fileB.id)
+    session.add_all([songA, songB])
+    session.commit()
+    
+    response = self.client.delete("/api/songs/{}".format(songA.id),
+      headers=[("Accept", "application/json")]
+    )
+    
+    session.delete(songA)
+    session.commit()
+    
+    data = json.loads(response.data)
+    self.assertEqual(data["message"], "Successfully deleted song with id {}".format(songA.id))
+    
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.mimetype, "application/json")
+    
+    songs = session.query(models.Song).all()
+    self.assertEqual(len(songs), 1)
+    
+    songB = songs[0]
+    self.assertEqual(songB.id, 2)
+    self.assertEqual(songB.song_file_id, 2)
     
 if __name__ == "__main__":
   unittest.main()    

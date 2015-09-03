@@ -47,3 +47,5 @@ class File(Base):
       "name": self.filename
     }
     return file
+    
+Base.metadata.create_all(engine)    

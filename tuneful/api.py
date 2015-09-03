@@ -80,3 +80,63 @@ def songs_post():
   headers = {"Location": url_for("songs_get", id=song.id)}
   
   return Response(data, 201, headers=headers, mimetype="application/json")
+  
+@app.route("/api/song/<int:id>", methods=["PUT"])
+@decorators.accept("application/json")
+@decorators.require("application/json")
+def update_song(id):
+  """ Single song update endpoint """
+  
+  # get the song from the database
+  song = session.query(models.Song).get(id)
+  
+  # cehck if the song exisits
+  # if not return a 404 with a helpful message
+  if not song:
+    message = "Could not find the song with id {}".format(id)
+    data = json.dumps({"message": message})
+    return Response(data, 404, mimetype="application/json")
+    
+  data = request.json
+  
+  # check that the JSON supplied is valid
+  # if not return a 422 Unprocessable Entry
+  try:
+    validate(data, song_schema)
+  except ValidationError as error:
+    data = {"message": error.message}
+    return Response(json.dumps(data), 422, mimetype="application/json")
+    
+  song.song_file_id = data["file"]["id"]
+  session.commit()
+  
+  # return an OK 200
+  # containing the song as JSON and with the
+  # location header set to the location of the song
+  data = json.dumps(song.as_dictionary())
+  headers = {"Location": url_for("song_get", id=song.id)}
+  return Response(data, 200, headers=headers, mimetype="application/json")
+  
+@app.route("/api/songs/<int:id>", methods=["DELETE"])
+@decorators.accept("application/json")
+def song_delete(id):
+  """ Single song delete endpoint """
+  
+  # get the song from the database
+  song = session.query(models.Song).get(id)
+  
+  # check if song exists
+  # if not return a 404 with a helpful message
+  if not song:
+    message = "Could not find song with id {}".format(id)
+    data = json.dumps({"message": message})
+    return Response(data, 404, mimetype="application/json")
+    
+  # successfully delete song
+  message = "Successfully deleted song with id {}".format(id)
+  data = json.dumps({"message": message, "song": song.as_dictionary()})
+  
+  session.delete(song)
+  session.commit()
+  
+  return Response(data, 200, mimetype="application/json")
